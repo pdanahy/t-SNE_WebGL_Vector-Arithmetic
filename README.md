@@ -20,8 +20,12 @@ pixplot --images "path/to/images/*.jpg"
 To see the results of this process, you can start a web server by running:
 
 "# for python 3.x"
+
 python -m http.server 5000
 
+
 "# for python 2.x"
+
 python -m SimpleHTTPServer 5000
+
 The visualization will then be available at http://localhost:5000/output.
