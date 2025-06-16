@@ -1,6 +1,6 @@
 # t-SNE_WebGL_3DPlotter
 
-Installation & Dependencies
+# Installation & Dependencies
 We maintain several platform-specific installation cookbooks online.
 
 Broadly speaking, to install the Python dependencies, we recommend you install Anaconda and then create a conda environment with a Python 3.7 runtime:
@@ -13,7 +13,7 @@ bash
 pip install https://github.com/yaledhlab/pix-plot/archive/master.zip
 The website that PixPlot eventually creates requires a WebGL-enabled browser.
 
-Quickstart
+# Quickstart
 If you have a WebGL-enabled browser and a directory full of images to process, you can prepare the data for the viewer by installing the dependencies above then running:
 
 pixplot --images "path/to/images/*.jpg"
