@@ -1,4 +1,4 @@
-t-SNE_WebGL_3DPlotter
+#t-SNE_WebGL_3DPlotter
 Installation & Dependencies
 We maintain several platform-specific installation cookbooks online.
 
