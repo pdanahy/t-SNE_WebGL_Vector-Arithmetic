@@ -29,3 +29,6 @@ python -m http.server 5000
 python -m SimpleHTTPServer 5000
 
 The visualization will then be available at http://localhost:5000/output.
+
+Original Forked Repo From:
+https://github.com/pleonard212/pix-plot/tree/master?tab=readme-ov-file#installation--dependencies
