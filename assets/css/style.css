@@ -1193,14 +1193,14 @@ noscript {
 #selected-image-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: left;
   width: 100%;
   height: 100%;
 }
 
 #selected-image-target {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: left;
   align-items: left;
   width: 50vw;
@@ -1325,9 +1325,9 @@ noscript {
 }
 
 .modal-text-right {
-  flex: 0.5;
   display: inline-block;
-  vertical-align: top;
+  flex-direction: row;
+  justify-content: left;
 }
 
 #meta-category-container {
