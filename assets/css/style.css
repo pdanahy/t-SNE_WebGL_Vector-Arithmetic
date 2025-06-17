@@ -1280,22 +1280,21 @@ noscript {
 * Selected Image Meta
 **/
 
-/* #selected-image-meta {
+#selected-image-meta {
   text-align: left;
   color: #555;
-  height: 115px;
+  height: auto;
   z-index: 1;
+  margin-top: 10px;
 }
 
 .meta-content {
-  padding: 24px 40px;
+  padding: 12px 0 0 0;
   transition: transform 0.3s;
 }
 
 #image-title {
-  font-weight: 600;
-  margin-bottom: 6px;
-  font-size: 16px;
+  display: none;
 }
 
 #image-text {
@@ -1335,7 +1334,7 @@ noscript {
   color: #777;
   font-size: 13px;
   font-weight: 600;
-} */
+}
 
 @media (max-width: 800px) {
   .modal-text-left {

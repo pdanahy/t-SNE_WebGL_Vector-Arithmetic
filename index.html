@@ -489,42 +489,30 @@
         <div class='modal-top'>
           <div id='selected-image-container'>
             <div id='selected-image-target'></div>
-            <!-- <div class='icons'>
-              <a target='_blank' id='eye-icon' href='<%- meta.permalink || meta.src %>'>
-                <img src='assets/images/icons/eye-icon.png' alt='eye icon' />
-              </a>
-              <a id='download-icon' href='<%- meta.src || "#" %>' download>
-                <img src='assets/images/icons/download-icon.png' alt='download icon' />
-              </a>
-            </div> -->
-            <% if (multiImage) { %>
-              <img id='caret-left' class='image-caret' src='assets/images/icons/chevron.png' onclick='modal.showPreviousCell()'>
-              <img id='caret-right' class='image-caret' src='assets/images/icons/chevron.png' onclick='modal.showNextCell()'>
-            <% } %>
-          </div>
-        </div>
-        <div class='modal-bottom' id='selected-image-meta'>
-          <div class='modal-bottom-content'>
-            <div class='modal-text-left'>
-              <div id='image-title'><%- meta.filename ? decodeURIComponent(meta.filename) : decodeURIComponent(meta.src) %></div>
-              <span id='image-text'><%= meta.description ? decodeURIComponent(meta.description) : '' %></span>
-              <span id='image-date'><%- meta.date ? '(' + meta.date + ')' : '' %></span>
-            </div>
-            <div class='modal-text-right'>
-              <% if (meta.category || meta.tags) { %>
-                <div id='meta-category-container'>
-                  <% if (meta.category) { %>
-                    <div class='meta-category'><%- meta.category %></div>
-                  <% }; %>
-                  <% if (meta.tags) { %>
-                    <% _.forEach(meta.tags, function(tag) { %>
-                      <% if (tag != meta.category) { %>
-                        <div class='meta-tag'><%- tag %></div>
+            <div id='selected-image-meta'>
+              <div class='modal-bottom-content'>
+                <div class='modal-text-left'>
+                  <div id='image-title'><%- meta.filename ? decodeURIComponent(meta.filename) : decodeURIComponent(meta.src) %></div>
+                  <span id='image-text'><%= meta.description ? decodeURIComponent(meta.description) : '' %></span>
+                  <span id='image-date'><%- meta.date ? '(' + meta.date + ')' : '' %></span>
+                </div>
+                <div class='modal-text-right'>
+                  <% if (meta.category || meta.tags) { %>
+                    <div id='meta-category-container'>
+                      <% if (meta.category) { %>
+                        <div class='meta-category'><%- meta.category %></div>
+                      <% }; %>
+                      <% if (meta.tags) { %>
+                        <% _.forEach(meta.tags, function(tag) { %>
+                          <% if (tag != meta.category) { %>
+                            <div class='meta-tag'><%- tag %></div>
+                          <% } %>
+                        <% }) %>
                       <% } %>
-                    <% }) %>
+                    </div>
                   <% } %>
                 </div>
-              <% } %>
+              </div>
             </div>
           </div>
         </div>
