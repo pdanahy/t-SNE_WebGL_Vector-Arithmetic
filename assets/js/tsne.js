@@ -220,7 +220,15 @@ Data.prototype.addCells = function(positions) {
         z:  worldPos[2] || null, // z position of cell in world
         dx: atlasPos[0] + atlasOffset.x, // x offset of cell in atlas
         dy: atlasPos[1] + atlasOffset.y, // y offset of cell in atlas
-      }))
+      }));
+      // --- Add category label as a floating sprite below the image ---
+      var cellMeta = this.json.metadata && this.json.metadata[idx];
+      if (cellMeta && cellMeta.category && typeof THREE !== 'undefined' && typeof world !== 'undefined' && world.scene) {
+        var label = createTextLabel(cellMeta.category);
+        // Position the label just below the image (adjust offset as needed)
+        label.position.set(worldPos[0], worldPos[1] - 0.12, worldPos[2] || 0);
+        world.scene.add(label);
+      }
       idx++;
     }
   }
