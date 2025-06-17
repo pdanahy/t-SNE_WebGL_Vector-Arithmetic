@@ -618,5 +618,23 @@
       ga('create', 'UA-101732875-1', 'auto');
       ga('send', 'pageview');
     </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var modal = document.getElementById('selected-image-modal');
+      if (modal) {
+        modal.onclick = function(e) {
+          if (e.target === this) {
+            this.style.display = 'none';
+          }
+        };
+        var content = modal.querySelector('.modal-content');
+        if (content) {
+          content.onclick = function(e) {
+            e.stopPropagation();
+          };
+        }
+      }
+    });
+    </script>
   </body>
 </html>
