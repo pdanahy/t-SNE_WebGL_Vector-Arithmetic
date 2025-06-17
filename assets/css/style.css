@@ -1188,11 +1188,8 @@ noscript {
 
 #selected-image-container {
   display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  max-height: 100%;
-  position: relative;
-  transform: translateX(0px);
+  flex-direction: column;
+  align-items: center;
 }
 
 #selected-image-target {
@@ -1281,10 +1278,7 @@ noscript {
 **/
 
 #selected-image-meta {
-  text-align: left;
-  color: #555;
-  height: auto;
-  z-index: 1;
+  width: 100%;
   margin-top: 10px;
 }
 
