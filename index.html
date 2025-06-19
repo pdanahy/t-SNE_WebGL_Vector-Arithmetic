@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang='en'>
   <head>
+    <!-- <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <link rel="icon" type="image/png" href="../favicon.png"> -->
+    <link rel="icon" type="image/jpeg" href="../output/assets/images/00164.jpg">
     <link rel="stylesheet" href="https://use.typekit.net/dbz0che.css">
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:300,400,600' rel='stylesheet'>
     <link rel='stylesheet' type='text/css' href='assets/css/no-ui-slider.css'>
@@ -443,7 +446,7 @@
     <div id='tooltip'></div>
     <!-- Loader -->
     <div id='loader-scene'>
-      <p class='welcome'>The following is a 3D map of latent <small><strong>affinities</strong></small>, where like images are clustered in space. You can surf the collection to discover unknown relationships and fide hidden <small><strong>affinities</strong></small> of the image set.</p>
+      <p class='welcome'>The following is a 3D map of latent <small><strong>affinities</strong></small>, where like images are clustered in space. You can surf the collection to discover unknown relationships and find hidden <small><strong>affinities</strong></small> within the image set.</p>
       <div class='loader-container'>
         <div class='loader-icon'>
           <div class='blocks'>
@@ -463,6 +466,8 @@
         </div>
       </div>
       <button id='enter-button'>Enter</button>
+      <p class='footer'> Anomalies & Order: Grammars of Anonymous Architectures</p>
+      <p class="author"><small>created by</small> <strong>Patrick Danahy</strong></p>
     </div>
     <!-- Canvas -->
     <div id='canvas-container'>
@@ -496,8 +501,8 @@
     </nav>
     <!-- Dismissible Tooltip: Hotspots -->
     <div class='dismissible-tooltip' id='hotspots-tooltip'>
-      <!-- <b>Explore Image Clusters</b>
-      <p>Select a hotspot to explore visually similar clusters.</p> -->
+      <b>Explore Image Clusters</b>
+      <p>Select a hotspot to explore visually similar clusters.</p>
       <button id='hotspots-tooltip-button'>Got it</button>
     </div>
     <div id='hotspot-actions'>
@@ -530,15 +535,15 @@
                 </div>
               <% } %>
             </div>
-            <!-- <div id='selected-image-meta'>
+            <div id='selected-image-meta'>
               <div class='modal-bottom-content'>
                 <div class='modal-text-left'>
                   <div id='image-title'><%- meta.filename ? decodeURIComponent(meta.filename) : decodeURIComponent(meta.src) %></div>
-                  <span id='image-text'><%= meta.description ? decodeURIComponent(meta.description) : '' %></span>
-                  <span id='image-date'><%- meta.date ? '(' + meta.date + ')' : '' %></span>
+                  <!-- <span id='image-text'><%= meta.description ? decodeURIComponent(meta.description) : '' %></span>
+                  <span id='image-date'><%- meta.date ? '(' + meta.date + ')' : '' %></span> -->
                 </div>
               </div>
-            </div> -->
+            </div>
           </div>
         </div>
       </div>

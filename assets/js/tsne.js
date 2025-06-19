@@ -77,7 +77,7 @@ function Config() {
     ease: Power1.easeOut,
     }
   }
-  this.pickerMaxZ = 0.4; // max z value of camera to trigger picker modal
+  this.pickerMaxZ = 0.1; // max z value of camera to trigger picker modal (lowered from 0.4)
   this.atlasesPerTex = (this.size.texture/this.size.atlas)**2;
   this.isLocalhost = window.location.hostname.includes('localhost') ||
     window.location.hostname.includes('127.0.0.1') ||
@@ -705,6 +705,8 @@ Layout.prototype.set = function(layout, enableDelay) {
     return;
   };
   world.state.transitioning = true;
+  // clear category lines when layout changes
+  clearCategoryLinesAndSelection();
   // set the selected layout
   this.selected = layout;
   // set the world mode back to pan
@@ -843,6 +845,8 @@ Layout.prototype.onTransitionComplete = function() {
   world.setScaleUniforms();
   // reindex cells in LOD given new positions
   lod.indexCells();
+  // redraw category lines using stored selection if available
+  redrawCategoryLinesFromStoredSelection();
 }
 
 /**
@@ -884,6 +888,12 @@ function World() {
     selectTooltipButton: document.querySelector('#select-tooltip-button'),
     mobileInteractions: document.querySelector('#mobile-interaction-guide'),
   };
+  
+  console.log('World elements found:');
+  console.log('selectTooltip:', this.elems.selectTooltip);
+  console.log('selectTooltipButton:', this.elems.selectTooltipButton);
+  console.log('mobileInteractions:', this.elems.mobileInteractions);
+  
   this.addEventListeners();
 }
 
@@ -1564,7 +1574,7 @@ World.prototype.flyTo = function(obj) {
       controls = new THREE.TrackballControls(camera, this.canvas);
   camera.position.set(obj.x, obj.y, obj.z);
   if (this.controls.type === 'trackball') {
-    controls.target.set(obj.x, obj.y, obj.z - 0.000001);
+    controls.target.set(obj.x, obj.y, obj.z); // Removed the -0.000001 offset to prevent looking below target
     controls.update();
   }
   // prepare scope globals to transition camera
@@ -1601,14 +1611,16 @@ World.prototype.flyTo = function(obj) {
 // fly to the cell at index position `idx`
 World.prototype.flyToCellIdx = function(idx) {
   var cell = data.cells[idx];
+  
+  // Calculate a reasonable viewing distance based on the cell's position
+  var targetZ = cell.z + 0.02; // Small offset above the cell
+  
   world.flyTo({
     x: cell.x,
     y: cell.y,
-    z: Math.min(
-      config.pickerMaxZ-0.0001,
-      cell.z + (this.getPointScale() / 100)
-    ),
+    z: targetZ,
   });
+  focusedCellIndex = idx; // Set the focused cell index
   drawCategoryLinesForCell(idx); // <-- Add this line
 }
 
@@ -1722,9 +1734,23 @@ World.prototype.toggleMode = function(e) {
 **/
 
 World.prototype.showSelectTooltip = function() {
+  console.log('showSelectTooltip called');
+  console.log('selectTooltip element:', this.elems.selectTooltip);
+  console.log('localStorage select-tooltip-cleared:', localStorage.getItem('select-tooltip-cleared'));
+  
+  // Temporary: clear localStorage to reset tooltips for testing
+  localStorage.removeItem('select-tooltip-cleared');
+  localStorage.removeItem('hotspots-tooltip-cleared');
+  
   if (!localStorage.getItem('select-tooltip-cleared') ||
        localStorage.getItem('select-tooltip-cleared') == 'false') {
-    this.elems.selectTooltip.style.display = 'inline-block';
+    console.log('Showing select tooltip');
+    this.elems.selectTooltip.style.display = 'block';
+    this.elems.selectTooltip.style.visibility = 'visible';
+    this.elems.selectTooltip.style.opacity = '1';
+    console.log('Tooltip display style:', this.elems.selectTooltip.style.display);
+  } else {
+    console.log('Select tooltip was previously dismissed');
   }
   this.elems.selectTooltipButton.addEventListener('click', function() {
     this.hideSelectTooltip();
@@ -1734,6 +1760,8 @@ World.prototype.showSelectTooltip = function() {
 World.prototype.hideSelectTooltip = function() {
   localStorage.setItem('select-tooltip-cleared', true);
   this.elems.selectTooltip.style.display = 'none';
+  this.elems.selectTooltip.style.visibility = 'hidden';
+  this.elems.selectTooltip.style.opacity = '0';
 }
 
 /**
@@ -1834,6 +1862,8 @@ Lasso.prototype.handleMouseDown = function(e) {
   if (!this.isLassoEvent(e)) return;
   if (!keyboard.shiftPressed() && !keyboard.commandPressed()) {
     this.points = [];
+    // Clear category lines and selection when starting a new lasso selection
+    clearCategoryLinesAndSelection();
   }
   this.mousedownCoords = getEventClientCoords(e);
   this.setCapturing(true);
@@ -1864,6 +1894,14 @@ Lasso.prototype.handleMouseUp = function(e) {
       !keyboard.shiftPressed() &&
       !keyboard.commandPressed()) {
     this.clear();
+    // Clear category lines when lasso is cleared
+    clearCategoryLinesAndSelection();
+  } else {
+    // Update selection based on lasso points
+    this.selected = this.getSelectedMap();
+    this.highlightSelected();
+    // Clear category lines when lasso selection is made
+    clearCategoryLines();
   }
   // do not turn off capturing if the user is clicking the lasso symbol
   if (!e.target.id || e.target.id == 'select') return;
@@ -1880,12 +1918,18 @@ Lasso.prototype.addModalEventListeners = function() {
       this.displayed = false;
     }
     if (e.target.className == 'background-image') {
-      var indices = [];
-      var index = 0;
-      Object.keys(this.selected).forEach(function(i, idx) {
-        if (i === e.target.getAttribute('data-image')) index = indices.length;
-        if (this.selected[i]) indices.push(idx);
+      // Get the list of selected images in the same order as displayed
+      var images = Object.keys(this.selected).filter(function(k) {
+        return this.selected[k];
       }.bind(this));
+      // Map these filenames to their global indices
+      var indices = images.map(function(filename) {
+        return data.json.images.indexOf(filename);
+      });
+      // Find the index of the clicked image in the displayed list
+      var clickedFilename = e.target.getAttribute('data-image');
+      var index = images.indexOf(clickedFilename);
+      // Use the position index within the indices array, not the global index
       modal.showCells(indices, index);
     }
   }.bind(this))
@@ -1914,6 +1958,22 @@ Lasso.prototype.addModalEventListeners = function() {
           break;
         }
       }
+    }
+    // Fix: clicking a selected image should open the correct image in the single image modal
+    if (e.target.className == 'background-image') {
+      // Get the list of selected images in the same order as displayed
+      var images = Object.keys(this.selected).filter(function(k) {
+        return this.selected[k];
+      }.bind(this));
+      // Map these filenames to their global indices
+      var indices = images.map(function(filename) {
+        return data.json.images.indexOf(filename);
+      });
+      // Find the index of the clicked image in the displayed list
+      var clickedFilename = e.target.getAttribute('data-image');
+      var index = images.indexOf(clickedFilename);
+      // Use the position index within the indices array, not the global index
+      modal.showCells(indices, index);
     }
   }.bind(this))
 
@@ -1962,6 +2022,8 @@ Lasso.prototype.clear = function() {
   data.hotspots.setCreateHotspotVisibility(false);
   this.setCapturing(false);
   this.points = [];
+  // Clear category lines and selection when lasso is cleared
+  clearCategoryLinesAndSelection();
 }
 
 Lasso.prototype.removeMesh = function() {
@@ -2155,7 +2217,13 @@ Lasso.prototype.highlightSelected = function() {
   var indices = [],
       keys = Object.keys(this.selected);
   for (var i=0; i<keys.length; i++) {
-    if (this.selected[keys[i]]) indices.push(i)
+    if (this.selected[keys[i]]) {
+      // Use the global index of the image, not the array index
+      var globalIndex = data.json.images.indexOf(keys[i]);
+      if (globalIndex !== -1) {
+        indices.push(globalIndex);
+      }
+    }
   }
   if (indices.length) {
     // hide the modal describing the lasso behavior
@@ -2327,6 +2395,11 @@ function Picker() {
   this.scene.background = new THREE.Color(0x000000);
   this.mouseDown = new THREE.Vector2();
   this.tex = this.getTexture();
+  
+  // Double-click detection
+  this.lastClickTime = 0;
+  this.lastClickCellIdx = -1;
+  this.doubleClickDelay = 300; // milliseconds
 }
 
 // get the texture on which off-screen rendering will happen
@@ -2363,17 +2436,67 @@ Picker.prototype.onMouseUp = function(e) {
   var allowedDelta = config.isTouchDevice ? 10 : 0;
   if (Math.abs(click.x - this.mouseDown.x) > allowedDelta ||
       Math.abs(click.y - this.mouseDown.y) > allowedDelta) return;
+  
+  // Check for double-click
+  var currentTime = new Date().getTime();
+  var isDoubleClick = (currentTime - this.lastClickTime < this.doubleClickDelay) && 
+                      (cellIdx === this.lastClickCellIdx);
+  
+  // Update last click info
+  this.lastClickTime = currentTime;
+  this.lastClickCellIdx = cellIdx;
+  
   // if we're in select mode, conditionally un/select the clicked cell
   if (world.mode == 'select') {
     if (keyboard.shiftPressed() || keyboard.commandPressed()) {
       return lasso.toggleSelection(cellIdx);
     }
   }
+  
   if (world.mode !== 'pan') return;
-  // else we're in pan mode; zoom in if the camera is far away, else show the modal
-  return world.camera.position.z > config.pickerMaxZ
-    ? world.flyToCellIdx(cellIdx)
-    : modal.showCells([cellIdx]);
+  
+  // Handle double-click in pan mode - show single image modal
+  if (isDoubleClick) {
+    return modal.showCells([cellIdx]);
+  }
+  
+  // Single click in pan mode - fly to cell
+  return world.flyToCellIdx(cellIdx);
+}
+
+// Handle double-click events
+Picker.prototype.onDoubleClick = function(e) {
+  // find the offset of the click event within the canvas
+  var click = this.getClickOffsets(e);
+  var cellIdx = this.select({x: click.x, y: click.y});
+  if (cellIdx === -1) return; // cellIdx == -1 means the user didn't click on a cell
+  if (e.target.id !== 'pixplot-canvas') return; // whether the click hit the gl canvas
+  
+  // In pan mode, double-click shows the single image modal
+  if (world.mode === 'pan') {
+    // Check if there's a category selection active
+    if (selectedCategory && lasso.selected && Object.keys(lasso.selected).length > 0) {
+      // Get all images in the selected category
+      var categoryImages = Object.keys(lasso.selected).filter(function(k) {
+        return lasso.selected[k];
+      });
+      // Map these filenames to their global indices
+      var categoryIndices = categoryImages.map(function(filename) {
+        return data.json.images.indexOf(filename);
+      });
+      // Find the index of the clicked cell in the category list
+      var clickedFilename = data.json.images[cellIdx];
+      var indexInCategory = categoryImages.indexOf(clickedFilename);
+      
+      if (indexInCategory !== -1) {
+        // Show modal with category images and current index
+        return modal.showCells(categoryIndices, indexInCategory);
+      }
+    }
+    
+    // Fallback: show single image if no category selection
+    return modal.showCells([cellIdx]);
+  }
 }
 
 // get the x, y offsets of a click within the canvas
@@ -2394,6 +2517,10 @@ Picker.prototype.init = function() {
   world.canvas.addEventListener('touchstart', this.onMouseDown.bind(this), { passive: false });
   document.body.addEventListener('mouseup', this.onMouseUp.bind(this));
   document.body.addEventListener('touchend', this.onMouseUp.bind(this), { passive: false });
+  
+  // Add double-click event listener
+  world.canvas.addEventListener('dblclick', this.onDoubleClick.bind(this));
+  
   var group = new THREE.Group();
   for (var i=0; i<world.group.children.length; i++) {
     var mesh = world.group.children[i].clone();
@@ -2680,6 +2807,10 @@ Modal.prototype.showCells = function(cellIndices, cellIdx) {
   self.state.displayed = true;
   self.cellIndices = Object.assign([], cellIndices);
   self.cellIdx = !isNaN(parseInt(cellIdx)) ? parseInt(cellIdx) : 0;
+  
+  // Highlight the images in the scene with white borders
+  world.setBorderedImages(cellIndices);
+  
   // parse data attributes
   var filename = data.json.images[self.cellIndices[self.cellIdx]];
   // conditionalize the path to the image
@@ -2739,6 +2870,8 @@ Modal.prototype.close = function() {
     this.cellIndices = [];
     this.cellIdx = null;
     this.state.displayed = false;
+    // Clear the bordered images when modal is closed
+    world.setBorderedImages([]);
   }.bind(this), 230)
 }
 
@@ -3253,6 +3386,12 @@ function Hotspots() {
     clearTooltip: document.querySelector('#hotspots-tooltip-button'),
     saveHotspots: document.querySelector('#save-hotspots'),
   }
+  
+  console.log('Hotspots elements found:');
+  console.log('nav:', this.elems.nav);
+  console.log('tooltip:', this.elems.tooltip);
+  console.log('clearTooltip:', this.elems.clearTooltip);
+  
   this.addEventListeners();
 }
 
@@ -3327,13 +3466,26 @@ Hotspots.prototype.addEventListeners = function() {
   }.bind(this))
   // add tooltip event listener
   this.elems.nav.addEventListener('mouseenter', function(e) {
-    if (localStorage.getItem('hotspots-tooltip-cleared')) return;
+    console.log('Hotspots nav mouseenter triggered');
+    console.log('hotspots-tooltip-cleared:', localStorage.getItem('hotspots-tooltip-cleared'));
+    console.log('tooltip element:', this.elems.tooltip);
+    
+    if (localStorage.getItem('hotspots-tooltip-cleared')) {
+      console.log('Hotspots tooltip was previously dismissed');
+      return;
+    }
+    console.log('Showing hotspots tooltip');
     this.elems.tooltip.style.display = 'block';
+    this.elems.tooltip.style.visibility = 'visible';
+    this.elems.tooltip.style.opacity = '1';
+    console.log('Hotspots tooltip display style:', this.elems.tooltip.style.display);
   }.bind(this))
   // add tooltip clearing event listener
   this.elems.clearTooltip.addEventListener('click', function(e) {
     localStorage.setItem('hotspots-tooltip-cleared', true);
     this.elems.tooltip.style.display = 'none';
+    this.elems.tooltip.style.visibility = 'hidden';
+    this.elems.tooltip.style.opacity = '0';
   }.bind(this))
 }
 
@@ -3749,7 +3901,13 @@ Welcome.prototype.startWorld = function() {
         document.querySelector('#loader-scene').classList += 'hidden';
         document.querySelector('#header-controls').style.opacity = 1;
         // Draw category lines after loader is hidden
-        loadAllMetadata(drawCategoryLines);
+        // loadAllMetadata(drawCategoryLines());
+        loadAllMetadata(function() {
+          // If there's a focused cell, redraw category lines for it
+          if (focusedCellIndex !== null) {
+            drawCategoryLinesForCell(focusedCellIndex);
+          }
+        });
       })
     }, 1500)
   }.bind(this))
@@ -4339,6 +4497,9 @@ function loadHotspots(userId, callback) {
 
 // --- Draw lines between images with the same metadata category ---
 var categoryLines = [];
+var focusedCellIndex = null; // Track the currently focused cell index
+var selectedCategory = null; // Track the currently selected category
+
 function drawCategoryLines() {
   clearCategoryLines();
   if (!data.cellMetadata) return;
@@ -4384,6 +4545,19 @@ function clearCategoryLines() {
   categoryLines = [];
 }
 
+// Function to clear category lines and associated selection
+function clearCategoryLinesAndSelection() {
+  clearCategoryLines();
+  
+  // Clear the lasso selection when category lines are cleared
+  // Only clear if the selection was made by category lines (not by user lasso)
+  if (selectedCategory) {
+    lasso.selected = {};
+    lasso.highlightSelected();
+    selectedCategory = null; // Reset the selected category
+  }
+}
+
 function loadAllMetadata(callback) {
   var total = data.cells.length;
   data.cellMetadata = [];
@@ -4397,13 +4571,13 @@ function loadAllMetadata(callback) {
       (function(i) {
         var filename = data.json.images[i];
         var metaPath = config.data.dir + '/metadata/file/' + filename + '.json';
-        console.log('[loadAllMetadata] Requesting:', metaPath);
+        // console.log('[loadAllMetadata] Requesting:', metaPath);
         get(metaPath, function(meta) {
-          console.log('[loadAllMetadata] Loaded:', metaPath, meta);
+          // console.log('[loadAllMetadata] Loaded:', metaPath, meta);
           data.cellMetadata[i] = meta;
           loaded++;
           if (loaded === total) {
-            console.log('[loadAllMetadata] All metadata loaded.');
+            // console.log('[loadAllMetadata] All metadata loaded.');
             if (callback) callback();
           } else if (loaded % batchSize === 0) {
             setTimeout(loadBatch, 0); // Schedule next batch
@@ -4418,10 +4592,13 @@ function loadAllMetadata(callback) {
 }
 
 function drawCategoryLinesForCell(cellIdx) {
-  clearCategoryLines();
+  clearCategoryLinesAndSelection();
   if (!data.cellMetadata) return;
   var meta = data.cellMetadata[cellIdx];
   if (!meta || !meta.category) return;
+
+  // Store the selected category in memory
+  selectedCategory = meta.category;
 
   // Find all cells in the same category
   var group = [];
@@ -4430,9 +4607,78 @@ function drawCategoryLinesForCell(cellIdx) {
     if (m && m.category === meta.category) group.push(cell);
   });
 
+  // Add all cells in the same category to the lasso selection
+  // Clear existing selection first
+  lasso.selected = {};
+  
+  // Add all cells in the category to the selection
+  group.forEach(function(cell) {
+    var imageName = data.json.images[cell.idx];
+    lasso.selected[imageName] = true;
+  });
+
+  // Update the UI to show the selection
+  lasso.highlightSelected();
+
   // Draw lines between the focused cell and all others in the group
   var positions = [];
   var focusCell = data.cells[cellIdx];
+  group.forEach(function(cell) {
+    if (cell.idx !== focusCell.idx) {
+      positions.push(focusCell.x, focusCell.y, focusCell.z);
+      positions.push(cell.x, cell.y, cell.z);
+    }
+  });
+
+  if (positions.length === 0) return;
+
+  var geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  var material = new THREE.LineBasicMaterial({ color: 0xff0000, opacity: 0.7, transparent: true });
+  var lineSegments = new THREE.LineSegments(geometry, material);
+  world.scene.add(lineSegments);
+  categoryLines = [lineSegments];
+}
+
+// Redraw category lines using stored category selection
+function redrawCategoryLinesFromStoredSelection() {
+  if (!data.cellMetadata || focusedCellIndex === null) return;
+  
+  // If no stored category but we have a focused cell, try to get the category from the cell
+  if (!selectedCategory) {
+    var meta = data.cellMetadata[focusedCellIndex];
+    if (meta && meta.category) {
+      selectedCategory = meta.category;
+    } else {
+      return; // No category available
+    }
+  }
+  
+  clearCategoryLines();
+  
+  // Find all cells in the same category
+  var group = [];
+  data.cells.forEach(function(cell, idx) {
+    var m = data.cellMetadata[idx];
+    if (m && m.category === selectedCategory) group.push(cell);
+  });
+
+  // Add all cells in the same category to the lasso selection
+  // Clear existing selection first
+  lasso.selected = {};
+  
+  // Add all cells in the category to the selection
+  group.forEach(function(cell) {
+    var imageName = data.json.images[cell.idx];
+    lasso.selected[imageName] = true;
+  });
+
+  // Update the UI to show the selection
+  lasso.highlightSelected();
+
+  // Draw lines between the focused cell and all others in the group
+  var positions = [];
+  var focusCell = data.cells[focusedCellIndex];
   group.forEach(function(cell) {
     if (cell.idx !== focusCell.idx) {
       positions.push(focusCell.x, focusCell.y, focusCell.z);

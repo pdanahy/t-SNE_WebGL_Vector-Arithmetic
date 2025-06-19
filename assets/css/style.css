@@ -941,12 +941,32 @@ nav h2 {
 }
 
 .welcome {
-  /* max-width: 1200px; */
-  margin: 0 auto;
-  font-size: 160px;
-  font-weight: 2;
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 10px;
+  font-size: clamp(24px, 6vw, 220px);
+  font-weight: 10;
   font-style: italic;
   font-family: "kepler-std", serif !important;
+  text-align: justify;
+  line-height: 1.3;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: normal;
+  word-wrap: break-word;
+  display: block;
+  max-width: calc(100vw - 80px);
+  max-height: calc(100vh - 80px);
+  z-index: 1;
+}
+
+.welcome small {
+  font-weight: 1;
+  display: inline;
+  white-space: normal;
+  word-wrap: normal;
 }
 
 @keyframes exit {
@@ -967,7 +987,7 @@ nav h2 {
 
 .loader-container {
   max-width: 70px;
-  margin: 30px auto 20px;
+  margin: 10px auto 20px;
   text-align: center;
 }
 
@@ -1404,11 +1424,13 @@ noscript {
 
 .dismissible-tooltip {
   position: absolute;
-  z-index: 1;
+  z-index: 1000;
   color: #fff;
   font-size: 12px;
   padding: 13px;
   display: none;
+  background: #222 !important;
+  border: 2px solid #fff !important;
 }
 
 .dismissible-tooltip#select-tooltip {
@@ -1943,4 +1965,61 @@ input[type=text] {
 #enter-button,
 small strong {
   font-family: "kepler-std", serif !important;
+}
+
+#progress {
+  position: relative;
+  text-align: center;
+  color: #fff;
+  font-size: 16px;
+  margin-bottom: 20px;
+  z-index: 100;
+}
+
+#progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0px;
+  background: #333;
+}
+
+#progress-bar {
+  background: #fff;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+/* Footer styling */
+.footer {
+  position: relative;
+  margin-top: 20px;
+  text-align: left;
+  color: #ccc;
+  font-size: 14px;
+  font-weight: 300;
+  z-index: 100;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.author {
+  position: relative;
+  margin-top: 10px;
+  text-align: right;
+  color: #ccc;
+  font-size: 12px;
+  font-weight: 300;
+  z-index: 100;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.author small {
+  color: #999;
+  font-size: 10px;
+}
+
+.author strong {
+  color: #fff;
+  font-weight: 600;
 }
