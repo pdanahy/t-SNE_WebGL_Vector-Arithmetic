@@ -234,6 +234,8 @@ Data.prototype.addCells = function(positions) {
   }
   // add the cells to a searchable LOD texture
   lod.indexCells();
+  console.log('Metadata:', this.json.metadata);
+  console.log('Cells:', this.cells.length);
 }
 
 /**
@@ -1606,7 +1608,8 @@ World.prototype.flyToCellIdx = function(idx) {
       config.pickerMaxZ-0.0001,
       cell.z + (this.getPointScale() / 100)
     ),
-  })
+  });
+  drawCategoryLinesForCell(idx); // <-- Add this line
 }
 
 // fly to the cell at index position `idx`
@@ -2694,9 +2697,24 @@ Modal.prototype.showCells = function(cellIndices, cellIdx) {
       })
     }
     target.innerHTML = _.template(template)(templateData);
-    target.style.display = 'block';
+    target.classList.add('visible');
     // inject the loaded image into the DOM
-    document.querySelector('#selected-image-target').appendChild(json.image);
+    var selectedImageTarget = document.querySelector('#selected-image-target');
+    var selectedImageElem = document.getElementById('selected-image');
+    if (selectedImageElem) {
+      selectedImageElem.src = src;
+    }
+    // Add event listeners to carets
+    var caretLeft = document.getElementById('caret-left');
+    var caretRight = document.getElementById('caret-right');
+    if (caretLeft) caretLeft.onclick = function(e) {
+      e.stopPropagation();
+      self.showPreviousCell();
+    };
+    if (caretRight) caretRight.onclick = function(e) {
+      e.stopPropagation();
+      self.showNextCell();
+    };
     var elem = document.querySelector('#selected-image-modal .modal-top');
     elem.style.opacity = 1;
   }
@@ -2717,7 +2735,7 @@ Modal.prototype.close = function() {
   if (!elem) return;
   this.fadeOutContent();
   setTimeout(function() {
-    document.querySelector('#selected-image-modal').style.display = 'none';
+    document.querySelector('#selected-image-modal').classList.remove('visible');
     this.cellIndices = [];
     this.cellIdx = null;
     this.state.displayed = false;
@@ -3730,6 +3748,8 @@ Welcome.prototype.startWorld = function() {
       requestAnimationFrame(function() {
         document.querySelector('#loader-scene').classList += 'hidden';
         document.querySelector('#header-controls').style.opacity = 1;
+        // Draw category lines after loader is hidden
+        loadAllMetadata(drawCategoryLines);
       })
     }, 1500)
   }.bind(this))
@@ -4290,3 +4310,142 @@ var tooltip = new Tooltip();
 var data = new Data();
 var attractmode = new AttractMode();
 // vim: ts=2 sw=2 et
+
+// --- Firebase Firestore Hotspot Save/Load ---
+// Save hotspots to Firestore
+function saveHotspots(hotspotData, userId) {
+  db.collection('hotspots').doc(userId).set({
+    data: hotspotData,
+    updated: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    alert('Hotspots saved!');
+  }).catch((error) => {
+    alert('Error saving hotspots: ' + error.message);
+  });
+}
+
+// Load hotspots from Firestore
+function loadHotspots(userId, callback) {
+  db.collection('hotspots').doc(userId).get().then(doc => {
+    if (doc.exists) {
+      callback(doc.data().data);
+    } else {
+      callback(null);
+    }
+  }).catch((error) => {
+    alert('Error loading hotspots: ' + error.message);
+  });
+}
+
+// --- Draw lines between images with the same metadata category ---
+var categoryLines = [];
+function drawCategoryLines() {
+  clearCategoryLines();
+  if (!data.cellMetadata) return;
+
+  // Collect all line segment vertices
+  var positions = [];
+  var color = new THREE.Color(0xff0000);
+
+  var categoryMap = {};
+  data.cells.forEach(function(cell, idx) {
+    var meta = data.cellMetadata[idx];
+    if (!meta || !meta.category) return;
+    if (!categoryMap[meta.category]) categoryMap[meta.category] = [];
+    categoryMap[meta.category].push(cell);
+  });
+
+  Object.values(categoryMap).forEach(function(group) {
+    for (var i = 0; i < group.length; i++) {
+      for (var j = i + 1; j < group.length; j++) {
+        positions.push(group[i].x, group[i].y, group[i].z);
+        positions.push(group[j].x, group[j].y, group[j].z);
+      }
+    }
+  });
+
+  if (positions.length === 0) return;
+
+  var geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  var material = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.01, transparent: true });
+  var lineSegments = new THREE.LineSegments(geometry, material);
+  world.scene.add(lineSegments);
+  categoryLines = [lineSegments];
+}
+
+function clearCategoryLines() {
+  if (!categoryLines) return;
+  categoryLines.forEach(function(line) {
+    world.scene.remove(line);
+    if (line.geometry) line.geometry.dispose();
+    if (line.material) line.material.dispose();
+  });
+  categoryLines = [];
+}
+
+function loadAllMetadata(callback) {
+  var total = data.cells.length;
+  data.cellMetadata = [];
+  var batchSize = 20; // Number of files to load at once
+  var loaded = 0;
+  var idx = 0;
+
+  function loadBatch() {
+    var end = Math.min(idx + batchSize, total);
+    for (var i = idx; i < end; i++) {
+      (function(i) {
+        var filename = data.json.images[i];
+        var metaPath = config.data.dir + '/metadata/file/' + filename + '.json';
+        console.log('[loadAllMetadata] Requesting:', metaPath);
+        get(metaPath, function(meta) {
+          console.log('[loadAllMetadata] Loaded:', metaPath, meta);
+          data.cellMetadata[i] = meta;
+          loaded++;
+          if (loaded === total) {
+            console.log('[loadAllMetadata] All metadata loaded.');
+            if (callback) callback();
+          } else if (loaded % batchSize === 0) {
+            setTimeout(loadBatch, 0); // Schedule next batch
+          }
+        });
+      })(i);
+    }
+    idx = end;
+  }
+
+  loadBatch();
+}
+
+function drawCategoryLinesForCell(cellIdx) {
+  clearCategoryLines();
+  if (!data.cellMetadata) return;
+  var meta = data.cellMetadata[cellIdx];
+  if (!meta || !meta.category) return;
+
+  // Find all cells in the same category
+  var group = [];
+  data.cells.forEach(function(cell, idx) {
+    var m = data.cellMetadata[idx];
+    if (m && m.category === meta.category) group.push(cell);
+  });
+
+  // Draw lines between the focused cell and all others in the group
+  var positions = [];
+  var focusCell = data.cells[cellIdx];
+  group.forEach(function(cell) {
+    if (cell.idx !== focusCell.idx) {
+      positions.push(focusCell.x, focusCell.y, focusCell.z);
+      positions.push(cell.x, cell.y, cell.z);
+    }
+  });
+
+  if (positions.length === 0) return;
+
+  var geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  var material = new THREE.LineBasicMaterial({ color: 0xff0000, opacity: 0.7, transparent: true });
+  var lineSegments = new THREE.LineSegments(geometry, material);
+  world.scene.add(lineSegments);
+  categoryLines = [lineSegments];
+}

@@ -10,6 +10,29 @@
     <title>Anomalies & Order: Grammars of Anonymous Architectures</title>
     <meta charset='UTF-8'/>
     <meta name='author' content='Patrick Danahy & Graemer Design Technologies'>
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
+      // TODO: Add SDKs for Firebase products that you want to use
+      // https://firebase.google.com/docs/web/setup#available-libraries
+    
+      // Your web app's Firebase configuration
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+      const firebaseConfig = {
+        apiKey: "AIzaSyC9fgN4F2YX6XxyMe7JOOELC_K7W9teYx4",
+        authDomain: "t-sne-webgl-3dplotter.firebaseapp.com",
+        projectId: "t-sne-webgl-3dplotter",
+        storageBucket: "t-sne-webgl-3dplotter.firebasestorage.app",
+        messagingSenderId: "381117527722",
+        appId: "1:381117527722:web:935fc6b80d4558ebc342d3",
+        measurementId: "G-JC5J8E5YHZ"
+      };
+    
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+    </script>
   </head>
   <body>
     <!-- version: VERSION_NUMBER -->
@@ -455,11 +478,9 @@
         <script type='text/html' id='hotspot-template'>
           <% _.forEach(hotspots, function(hotspot, idx) { %>
             <div class='hotspot' id='hotspot-<%= idx %>' draggable='<%= isLocalhost %>'>
-              <% if (isLocalhost) { %>
-                <div id='save-hotspots' class='button hotspot-button'>Save Hotspots</div>
-                <div class='hotspot-action drag-hotspot'>...</div>
-                <!-- <img class='hotspot-action refresh-hotspot' src='assets/images/icons/refresh.svg'> -->
-              <% } %>
+              <div id='save-hotspots' class='button hotspot-button'>Save Hotspots</div>
+              <div class='hotspot-action drag-hotspot'>...</div>
+              <!-- <img class='hotspot-action refresh-hotspot' src='assets/images/icons/refresh.svg'> -->
               <div class='hotspot-body no-highlight'>
                 <img class='hotspot-image' src='data/thumbs/<%= hotspot.img %>'>
                 <div class='hotspot-bar-container'>
@@ -488,7 +509,11 @@
         <div class='modal-x'>✕</div>
         <div class='modal-top'>
           <div id='selected-image-container'>
-            <div id='selected-image-target'></div>
+            <div id='selected-image-target'>
+              <img id="selected-image" />
+              <div class="image-caret" id="caret-left">&#9664;</div>
+              <div class="image-caret" id="caret-right">&#9654;</div>
+            </div>
             <div class='modal-text-right'>
               <% if (meta.category || meta.tags) { %>
                 <div id='meta-category-container'>
@@ -624,7 +649,7 @@
       if (modal) {
         modal.onclick = function(e) {
           if (e.target === this) {
-            this.style.display = 'none';
+            this.classList.remove('visible');
           }
         };
         var content = modal.querySelector('.modal-content');
